@@ -2,6 +2,7 @@
 .github
 .next
 node_modules
+.tools
 docs
 mcp-server
 supabase

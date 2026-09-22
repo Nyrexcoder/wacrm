@@ -41,6 +41,7 @@ const { middleware } = await import("./middleware");
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+  process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "false";
   mockUser = null;
   refreshedCookies = [];
 });
@@ -54,6 +55,28 @@ const ROTATED = {
 };
 
 describe("middleware — refreshed auth cookies survive redirects", () => {
+  it("redirects a logged-out visitor away from signup when registration is closed", async () => {
+    refreshedCookies = [ROTATED];
+
+    const res = await middleware(
+      new NextRequest("https://app.test/signup"),
+    );
+
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("https://app.test/login");
+    expect(res.cookies.get(ROTATED.name)?.value).toBe(ROTATED.value);
+  });
+
+  it("allows the signup page when registration is explicitly enabled", async () => {
+    process.env.NEXT_PUBLIC_SIGNUP_ENABLED = "true";
+
+    const res = await middleware(
+      new NextRequest("https://app.test/signup"),
+    );
+
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("carries the rotated token when redirecting a signed-in user off /login", async () => {
     mockUser = { id: "user-1" };
     refreshedCookies = [ROTATED];

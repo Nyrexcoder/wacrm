@@ -12,6 +12,7 @@ services:
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
         NEXT_PUBLIC_APP_LOCALE: ${NEXT_PUBLIC_APP_LOCALE:-en}
+        NEXT_PUBLIC_SIGNUP_ENABLED: ${NEXT_PUBLIC_SIGNUP_ENABLED:-false}
     # Runtime (server-only) secrets come from .env.local; they are
     # never baked into the image.
     env_file:
@@ -22,6 +23,11 @@ services:
     # healthcheck below.
     environment:
       PORT: 3000
+    # Resolve the same local Supabase URL from both the browser and
+    # inside this container. On the host, *.localhost maps to loopback;
+    # in Docker, this entry routes it back through the host gateway.
+    extra_hosts:
+      - 'supabase.localhost:host-gateway'
     # Host side only — HOST_PORT=8080 publishes the app on :8080.
     ports:
       - '${HOST_PORT:-3000}:3000'
@@ -32,7 +38,7 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3000').then((r)=>process.exit(r.ok||r.status<500?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://localhost:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

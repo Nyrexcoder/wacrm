@@ -5,10 +5,10 @@
 # recognises before it can boot a throwaway Postgres and replay
 # `supabase/migrations/` against it.
 #
-# It is NOT a mirror of the hosted project's settings. Auth providers,
+# It is NOT a full mirror of the hosted project's settings. Auth providers,
 # storage limits, SMTP, rate limits and the rest are configured in the
-# Supabase dashboard and are deliberately left out here rather than
-# duplicated into a second source of truth that would quietly drift.
+# production Supabase deployment. The one local Auth policy below deliberately
+# mirrors production so a direct Auth API request cannot bypass the closed UI.
 # Run `supabase init` if you ever want the CLI's full annotated
 # reference version of this file.
 project_id = "wacrm"
@@ -22,3 +22,11 @@ shadow_port = 54320
 # one failure mode this whole check exists to prevent. 17 is the CLI's
 # current default, not a reading of the live project.
 major_version = 17
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**"]
+enable_signup = false
+
+[auth.email]
+enable_signup = false

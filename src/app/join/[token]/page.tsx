@@ -83,6 +83,8 @@ export default function JoinPage() {
   // Role labels are shared with Settings → Members so the invite page
   // and the member list always agree on what a role is called.
   const tRoles = useTranslations('Settings.roles');
+  const signupEnabled =
+    process.env.NEXT_PUBLIC_SIGNUP_ENABLED === 'true';
 
   const [peek, setPeek] = useState<PeekResult | null>(null);
   // Local auth probe — the AuthProvider lives inside the (dashboard)
@@ -233,13 +235,9 @@ export default function JoinPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {/* For server_error the failure is transient — the network
-              flapped or the peek endpoint hiccupped. Try-again is
-              the right primary action; the "create account" /
-              "sign in" links stay as secondary options. Other
-              failure reasons (not_found / used / expired) are
-              terminal for this token, so no retry — just the
-              signup/sign-in escape hatches. */}
+          {/* For server_error the failure is transient, so try-again is
+              the primary action. Public account creation only appears
+              when the deployment has explicitly enabled it. */}
           {peek.reason === 'server_error' ? (
             <>
               <Button
@@ -248,22 +246,26 @@ export default function JoinPage() {
               >
                 {t('tryAgain')}
               </Button>
-              <Link href="/signup">
-                <Button
-                  variant="outline"
-                  className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  {t('createNewAccount')}
-                </Button>
-              </Link>
+              {signupEnabled && (
+                <Link href="/signup">
+                  <Button
+                    variant="outline"
+                    className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    {t('createNewAccount')}
+                  </Button>
+                </Link>
+              )}
             </>
           ) : (
             <>
-              <Link href="/signup">
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                  {t('createNewAccount')}
-                </Button>
-              </Link>
+              {signupEnabled && (
+                <Link href="/signup">
+                  <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                    {t('createNewAccount')}
+                  </Button>
+                </Link>
+              )}
               <Link href="/login">
                 <Button
                   variant="outline"
@@ -399,16 +401,18 @@ export default function JoinPage() {
     );
   }
 
-  // ----- Not authed: prompt to sign up or sign in -----
+  // ----- Not authed: prompt to sign up (when enabled) or sign in -----
   return (
     <Card className="w-full max-w-md border-border bg-card">
       {inviteHeader}
       <CardContent className="flex flex-col gap-2">
-        <Link href={`/signup?invite=${encodeURIComponent(token!)}`}>
-          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            {t('createAndJoin')}
-          </Button>
-        </Link>
+        {signupEnabled && (
+          <Link href={`/signup?invite=${encodeURIComponent(token!)}`}>
+            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+              {t('createAndJoin')}
+            </Button>
+          </Link>
+        )}
         <Link href={`/login?invite=${encodeURIComponent(token!)}`}>
           <Button
             variant="outline"

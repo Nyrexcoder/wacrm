@@ -42,6 +42,20 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Public registration is closed by default. Hiding the link in the
+  // login UI is only cosmetic, so guard the route as well. Supabase Auth
+  // must be configured to match (see docs/dokploy.md) so callers cannot
+  // bypass this UI guard by posting directly to the Auth API.
+  if (
+    !user &&
+    request.nextUrl.pathname === '/signup' &&
+    process.env.NEXT_PUBLIC_SIGNUP_ENABLED !== 'true'
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return withRefreshedCookies(NextResponse.redirect(url))
+  }
+
   // Auth pages - redirect to dashboard if already logged in.
   // Exception: when an invite token is in the query string we
   // send the already-signed-in user to /join/<token> instead so
