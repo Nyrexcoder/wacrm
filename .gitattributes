@@ -1,0 +1,3 @@
+*.sh text eol=lf
+infra/supabase/**/*.yml text eol=lf
+infra/supabase/**/*.sql text eol=lf

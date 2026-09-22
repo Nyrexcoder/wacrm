@@ -1,73 +1,77 @@
-# Deploying WACRM on Dokploy
+# WACRM + self-hosted Supabase on Dokploy
 
-This repository includes `docker-compose.dokploy.yml` for the WACRM app.
-Supabase should be deployed as its own production Docker Compose project (or
-use a hosted Supabase project); point WACRM at its public HTTPS API URL.
+`docker-compose.dokploy.yml` deploys the complete stack in one Dokploy Compose
+project: WACRM, Postgres, Auth, REST, Realtime, Storage, Studio, image proxy,
+Edge Functions, API gateway, and an automatic WACRM migration job.
 
-## 1. Prepare DNS
+The Supabase configuration and image versions are pinned to the official
+`self-hosted/v0.8.1` release. Postgres and Storage use named Docker volumes, so
+normal redeploys do not delete production data.
 
-Create DNS records for two HTTPS hosts, for example:
+## 1. DNS
+
+Create two DNS records pointing to the Dokploy server:
 
 - `crm.example.com` for WACRM
-- `supabase.example.com` for the Supabase API
+- `supabase.example.com` for the Supabase API and protected Studio
 
-Do not expose Postgres, Studio, or other Supabase internal ports publicly.
+Postgres and all other internal services are not exposed publicly.
 
-## 2. Configure Supabase first
+## 2. Generate the environment
 
-Apply every SQL file under `supabase/migrations/` in filename order. Configure
-Supabase Auth with:
+Run locally, replacing the URLs and Gmail address:
 
-- Site URL: `https://crm.example.com`
-- Allowed redirect URL: `https://crm.example.com/**`
-- New user signups: disabled
-
-For self-hosted Supabase, set these values on the Auth service:
-
-```env
-GOTRUE_SITE_URL=https://crm.example.com
-GOTRUE_URI_ALLOW_LIST=https://crm.example.com/**
-GOTRUE_DISABLE_SIGNUP=true
+```bash
+node scripts/generate-dokploy-env.mjs \
+  https://crm.example.com \
+  https://supabase.example.com \
+  admin@example.com
 ```
 
-`GOTRUE_DISABLE_SIGNUP=true` is the security boundary. The WACRM UI also hides
-and redirects `/signup`, but disabling it in Supabase prevents direct Auth API
-requests from creating users.
+Paste the complete output into Dokploy's Environment editor. Replace only:
 
-Configure SMTP on the Supabase Auth service, not on the WACRM app. Gmail SMTP
-can be used initially; keep its app password only in Dokploy's environment.
+- `META_APP_SECRET=PASTE_META_APP_SECRET`
+- `SMTP_PASS=PASTE_GOOGLE_APP_PASSWORD`
 
-## 3. Create the WACRM Compose project
+The generated `ANON_KEY`, `SERVICE_ROLE_KEY`, database password, Studio
+password, JWT secret, and encryption keys belong together. Save one secure
+backup and never commit the generated environment to Git.
 
-In Dokploy:
+## 3. Deploy
 
-1. Create a **Docker Compose** project from this Git repository.
-2. Set the Compose path to `./docker-compose.dokploy.yml`.
-3. Paste the variables from `.env.dokploy.example` into Dokploy's Environment
-   editor and replace every placeholder.
-4. Deploy the project.
-5. In Dokploy Domains, route `crm.example.com` to service `app`, port `3000`,
-   with HTTPS enabled.
+1. Select this Git repository and the `main` branch.
+2. Set Compose path to `./docker-compose.dokploy.yml`.
+3. Paste the generated environment and deploy.
+4. In Dokploy Domains, route the CRM hostname to service `app`, port `3000`.
+5. Route the Supabase hostname to service `api-gw`, port `8000`.
+6. Enable HTTPS for both domains.
 
-The Compose file joins Dokploy's external `dokploy-network`; no host port or
-database secret is exposed. `NEXT_PUBLIC_*` values are passed at build time,
-so changing one requires a rebuild/redeploy. Server-only secrets are injected
-only at runtime.
+The one-shot `migrate` service applies every `supabase/migrations/*.sql` file
+in order. It records successful filenames and safely skips them on later
+deploys. The WACRM app starts only after the database is healthy, migrations
+finish, and the Supabase gateway is healthy.
 
-## 4. Production checks
+## 4. Security and first user
+
+Public signup is closed in both WACRM and Supabase (`DISABLE_SIGNUP=true`).
+After the stack is healthy, create the first production user from the protected
+Supabase Studio Auth page. Do not expose database ports or share the
+`SERVICE_ROLE_KEY`.
+
+The Supabase hostname opens Studio at `/` using `DASHBOARD_USERNAME` and
+`DASHBOARD_PASSWORD`; its APIs remain available below `/auth/v1`, `/rest/v1`,
+`/realtime/v1`, `/storage/v1`, and `/functions/v1`.
+
+## 5. Verification
 
 - `https://crm.example.com/api/health` returns `{ "status": "ok" }`.
-- `/signup` redirects to `/login`, and the login page has no create-account
-  link.
-- Existing users can sign in and reset their passwords by email.
-- The Supabase Auth settings endpoint reports `disable_signup: true`.
-- Set Meta's callback URL to
-  `https://crm.example.com/api/whatsapp/webhook`, subscribe to `messages`, and
-  use the same verify token saved in WACRM.
-- Keep `ENCRYPTION_KEY` backed up. Replacing it makes saved WhatsApp and AI
-  provider tokens unreadable.
-- Back up the Supabase Postgres data and Storage volumes before upgrades.
+- `https://supabase.example.com/auth/v1/health` returns a healthy response.
+- `/signup` redirects to `/login`.
+- Dokploy shows `migrate` as successfully exited and the long-running services
+  as healthy.
+- Meta webhook URL is
+  `https://crm.example.com/api/whatsapp/webhook`.
 
-To intentionally reopen registration later, set
-`NEXT_PUBLIC_SIGNUP_ENABLED=true`, set `GOTRUE_DISABLE_SIGNUP=false`, and
-redeploy both services.
+Back up the `db-data` and `storage-data` volumes. Replacing `JWT_SECRET`, API
+keys, `POSTGRES_PASSWORD`, or `ENCRYPTION_KEY` after first deployment can break
+sessions, database access, or saved WhatsApp credentials.
