@@ -5,6 +5,7 @@ node_modules
 .tools
 docs
 mcp-server
+infra
 supabase
 *.md
 !README.md
