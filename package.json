@@ -2,16 +2,16 @@
   "name": "wacrm",
   "version": "0.8.0",
   "private": true,
-  "description": "Self-hostable CRM template for WhatsApp built on Next.js and Supabase — shared inbox, contacts, sales pipelines, broadcasts, and no-code automations.",
+  "description": "Powered by nyrexDeveloper.",
   "license": "MIT",
-  "author": "Arnas Donauskas",
-  "homepage": "https://github.com/ArnasDon/wacrm",
+  "author": "nyrexDeveloper",
+  "homepage": "https://wacrm.ewaytechinternational.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArnasDon/wacrm.git"
+    "url": "git+https://github.com/Nyrexcoder/wacrm.git"
   },
   "bugs": {
-    "url": "https://github.com/ArnasDon/wacrm/issues"
+    "url": "https://github.com/Nyrexcoder/wacrm/issues"
   },
   "keywords": [
     "crm",
@@ -21,8 +21,7 @@
     "supabase",
     "automation",
     "broadcast",
-    "self-hosted",
-    "template"
+    "nyrexdeveloper"
   ],
   "engines": {
     "node": ">=20.0.0"

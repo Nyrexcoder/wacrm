@@ -21,11 +21,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+  ),
+  applicationName: "WACRM",
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "WACRM",
+    template: "%s — WACRM",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "Powered by nyrexDeveloper",
+  creator: "nyrexDeveloper",
+  publisher: "nyrexDeveloper",
+  openGraph: {
+    type: "website",
+    siteName: "WACRM",
+    title: "WACRM",
+    description: "Powered by nyrexDeveloper",
+  },
+  twitter: {
+    card: "summary",
+    title: "WACRM",
+    description: "Powered by nyrexDeveloper",
+  },
   robots: {
     index: false,
     follow: false,
